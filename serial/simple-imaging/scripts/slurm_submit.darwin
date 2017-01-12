@@ -1,0 +1,70 @@
+#!/bin/bash
+#!
+#! Example SLURM job script for Wilkes (Ivy Bridge, Connect-IB, K20c)
+#! Last updated: Sat Apr 18 13:05:27 BST 2015
+#!
+
+#!#############################################################
+#!#### Modify the options in this section as appropriate ######
+#!#############################################################
+
+#! sbatch directives begin here ###############################
+#! Name of the job:
+#SBATCH -J simple-imaging
+#! Redirect stderr and stdout
+#SBATCH --output OUTPUT/simple-imaging-serial.%j.out
+#SBATCH --error OUTPUT/simple-imaging-serial.%j.err
+#! Which project should be charged (NB Wilkes projects end in '-GPU'):
+#SBATCH -A SKA-SDP
+#! How many whole nodes should be allocated?
+#SBATCH --nodes=1
+#! How many (MPI) tasks will there be in total? (<=nodes*12)
+#SBATCH --ntasks=1
+#! How much wallclock time will be required?
+#SBATCH --time=01:05:00
+#! What types of email messages do you wish to receive?
+#SBATCH --mail-type=FAIL
+#! Uncomment this to prevent the job from being requeued (e.g. if
+#! interrupted by node failure or system downtime):
+#SBATCH --no-requeue
+#! How much memory in MB is required _per node_? Not setting this
+#! will lead to a default of (1/16)*total memory per task.
+#! Setting a larger amount per task increases the number of cores.
+#SBATCH --mem=63900  # 63900 is the maximum value allowed per node
+
+# Request the nodes in exclusive mode
+#SBATCH --exclusive
+# Request the nodes to be on the same switch
+#SBATCH --switches=1
+# Binding tasks to cores
+
+
+#! Do not change:
+#SBATCH -p sandybridge
+
+#! sbatch directives end here (put any additional directives above this line)
+#! Number of nodes and tasks per node allocated by SLURM (do not change):
+numnodes=$SLURM_JOB_NUM_NODES
+#! Full path to application executable: 
+application="../simple-imaging"
+
+#! Run options for the application:
+options="--theta=0.08 --lambda=300000 --image=/scratch/mf582/data/OUTPUT/img.out /scratch/mf582/data/vis.h5"
+
+if [ "$SLURM_JOB_NODELIST" ]; then
+        #! Create a machine file:
+        export SSH_SERVERS_FILE=`generate_pbs_nodefile`
+        echo -e "\nNodes allocated:\n================"
+        #cat $SSH_SERVERS_FILE
+        export SSH_SERVERS=""
+        while read NAME
+        do
+           echo "$NAME"
+           SSH_SERVERS="$SSH_SERVERS $NAME" 
+        done < $SSH_SERVERS_FILE
+        echo $SSH_SERVERS
+fi
+
+
+CMD="$application $options"
+eval $CMD 
